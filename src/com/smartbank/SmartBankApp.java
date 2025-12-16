@@ -1,31 +1,23 @@
 package com.smartbank;
-import java.util.Scanner; 
-/*
- * SmartBankApp (simple, one package)
- * ----------------------------------
- * - One package: com.smartbank
- * - Classes in same package:
- *      Account (abstract)
- *      SavingsAccount, CurrentAccount
- *      BankOperations (interface)
- *      InsufficientFundsException, NegativeAmountException
- * - Uses simple array of accounts (no Map / HashMap)
- * - Menu with switch-case
- * - Simple & compound interest
- */
 
-public class SmartBankApp {
+import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 
-    static Account[] accounts = new Account[3];
+public class SmartBankApp 
+{
+    static Account[] accounts = new Account[7];
     static Scanner sc = new Scanner(System.in);
 
-    public static void main(String[] args) 
-    {
-        // Demo accounts
-        accounts[0] = new SavingsAccount(1, "Alice", 1000, 6.0);
-        accounts[1] = new CurrentAccount(2, "Bob", 1500, 0.0);
-        accounts[2] = new SavingsAccount(3, "Charlie", 2000, 5.0);
-
+    public static void main(String[] args) {
+    	accounts[0] = new SavingsAccount(1, "Ali", 1000, 6.0);
+        accounts[1] = new CurrentAccount(2, "Hemanth", 1500, 0.0);
+        accounts[2] = new SavingsAccount(3, "Vishal", 2000, 5.0);
+        accounts[3] = new SavingsAccount(4, "Ramu", 5000, 3.0);
+        accounts[4] = new SavingsAccount(5, "Balu", 2500, 5.0);
+        accounts[5] = new SavingsAccount(6, "Gopi", 1250, 2.0);
+        accounts[6] = new SavingsAccount(7, "Chandu", 3000, 7.0);
         boolean running = true;
 
         while (running) {
@@ -33,53 +25,40 @@ public class SmartBankApp {
             int choice = readInt("Enter your choice: ");
 
             switch (choice) {
-                case 1:
-                    doDeposit();
-                    break;
-                case 2:
-                    doWithdraw();
-                    break;
-                case 3:
-                    doTransfer();
-                    break;
-                case 4:
-                    interestCalculator();
-                    break;
-                case 5:
-                    runMonthEndForAll();
-                    break;
-                case 6:
-                    showAllAccounts();
-                    break;
+                case 1: doDeposit(); break;
+                case 2: doWithdraw(); break;
+                case 3: doTransfer(); break;
+                case 4: interestCalculator(); break;
+                case 5: runMonthEndForAll(); break;
+                case 6: showAllAccounts(); break;
+                case 7: showAllTransactions(); break;
                 case 0:
                     System.out.println("Exiting... Thank you!");
                     running = false;
                     break;
                 default:
-                    System.out.println("Invalid choice. Please try again.");
+                    System.out.println("Invalid choice.");
             }
         }
     }
 
-    // ===== Menu and input helpers =====
-
     static void printMenu() {
-        System.out.println();
-        System.out.println("===== SMART BANK MENU =====");
+        System.out.println("\n===== SMART BANK MENU =====");
         System.out.println("1. Deposit");
         System.out.println("2. Withdraw");
         System.out.println("3. Transfer");
-        System.out.println("4. Interest Calculator (Simple + Compound)");
+        System.out.println("4. Interest Calculator");
         System.out.println("5. Run Month-End Processing");
         System.out.println("6. Show All Accounts");
+        System.out.println("7. Show Transaction History");
         System.out.println("0. Exit");
     }
 
     static int readInt(String msg) {
         System.out.print(msg);
         while (!sc.hasNextInt()) {
-            System.out.print("Please enter a valid integer: ");
             sc.next();
+            System.out.print("Enter valid integer: ");
         }
         return sc.nextInt();
     }
@@ -87,117 +66,92 @@ public class SmartBankApp {
     static double readDouble(String msg) {
         System.out.print(msg);
         while (!sc.hasNextDouble()) {
-            System.out.print("Please enter a valid number: ");
             sc.next();
+            System.out.print("Enter valid number: ");
         }
         return sc.nextDouble();
     }
 
-    // ===== Account helper =====
-
-    static Account findAccount(int accNo) {
-        for (int i = 0; i < accounts.length; i++) {
-            if (accounts[i] != null && accounts[i].getAccountNo() == accNo) {
-                return accounts[i];
-            }
+    static Account findAccount(int no) {
+        for (Account a : accounts) {
+            if (a != null && a.getAccountNo() == no)
+                return a;
         }
         return null;
     }
 
-    // ===== Operations =====
-
     static void doDeposit() {
-        int no = readInt("Enter account number: ");
-        Account acc = findAccount(no);
+        Account acc = findAccount(readInt("Account number: "));
+        if (acc == null) return;
 
-        if (acc == null) {
-            System.out.println("Account not found.");
-            return;
-        }
-
-        double amount = readDouble("Enter amount to deposit: ");
-        acc.deposit(amount); // exceptions handled inside
-        System.out.println("Current balance: " + acc.getBalance());
+        double amt = readDouble("Amount: ");
+        acc.deposit(amt);
+        TransactionLogger.log(acc, "DEPOSIT", amt);
+        System.out.println("Balance: " + acc.getBalance());
     }
 
     static void doWithdraw() {
-        int no = readInt("Enter account number: ");
-        Account acc = findAccount(no);
+        Account acc = findAccount(readInt("Account number: "));
+        if (acc == null) return;
 
-        if (acc == null) {
-            System.out.println("Account not found.");
-            return;
-        }
-
-        double amount = readDouble("Enter amount to withdraw: ");
-        acc.withdraw(amount); // exceptions handled inside
-        System.out.println("Current balance: " + acc.getBalance());
+        double amt = readDouble("Amount: ");
+        acc.withdraw(amt);
+        TransactionLogger.log(acc, "WITHDRAW", amt);
+        System.out.println("Balance: " + acc.getBalance());
     }
 
     static void doTransfer() {
-        System.out.println("From account:");
-        int fromNo = readInt("Enter account number: ");
-        Account from = findAccount(fromNo);
-        if (from == null) {
-            System.out.println("From account not found.");
-            return;
-        }
+        Account from = findAccount(readInt("From account: "));
+        Account to = findAccount(readInt("To account: "));
+        if (from == null || to == null) return;
 
-        System.out.println("To account:");
-        int toNo = readInt("Enter account number: ");
-        Account to = findAccount(toNo);
-        if (to == null) {
-            System.out.println("To account not found.");
-            return;
-        }
+        double amt = readDouble("Amount: ");
 
-        double amount = readDouble("Enter amount to transfer: ");
+        from.withdraw(amt);
+        to.deposit(amt);
 
-        try {
-            from.doWithdraw(amount);
-            to.doDeposit(amount);
-            System.out.println("Transfer successful.");
-        } catch (NegativeAmountException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (InsufficientFundsException e) {
-            System.out.println("Error: " + e.getMessage());
-        }
+        TransactionLogger.log(from, "TRANSFER_OUT", amt);
+        TransactionLogger.log(to, "TRANSFER_IN", amt);
 
-        System.out.println("From balance: " + from.getBalance());
-        System.out.println("To balance: " + to.getBalance());
+        System.out.println("Transfer successful.");
     }
 
-    // Simple + Compound interest
     static void interestCalculator() {
-        System.out.println("=== Interest Calculator ===");
-        double P = readDouble("Enter principal (P): ");
-        double R = readDouble("Enter annual rate in % (R): ");
-        double T = readDouble("Enter time in years (T): ");
+        double P = readDouble("Principal: ");
+        double R = readDouble("Rate (%): ");
+        double T = readDouble("Years: ");
 
-        double simple = (P * R * T) / 100.0;                  // simple interest [web:11][web:35]
-        double A = P * Math.pow(1 + R / 100.0, T);            // amount with compounding [web:11][web:35]
-        double compound = A - P;
+        double simple = (P * R * T) / 100;
+        double compound = P * Math.pow(1 + R / 100, T) - P;
 
-        System.out.println("Simple Interest = " + simple);
-        System.out.println("Compound Interest = " + compound);
+        System.out.println("Simple Interest: " + simple);
+        System.out.println("Compound Interest: " + compound);
     }
 
     static void runMonthEndForAll() {
-        System.out.println("Running month-end processing for all accounts...");
-        for (int i = 0; i < accounts.length; i++) {
-            if (accounts[i] != null) {
-                accounts[i].monthEndProcess();
-            }
-        }
-        System.out.println("Month-end processing completed.");
+        for (Account a : accounts)
+            if (a != null)
+                a.monthEndProcess();
+        System.out.println("Month-end completed.");
     }
 
     static void showAllAccounts() {
-        System.out.println("=== Account List ===");
-        for (int i = 0; i < accounts.length; i++) {
-            if (accounts[i] != null) {
-                System.out.println(accounts[i]);
+        for (Account a : accounts)
+            if (a != null)
+                System.out.println(a);
+    }
+
+    // ⭐ TRANSACTION HISTORY
+    static void showAllTransactions() {
+        System.out.println("\n=== TRANSACTION HISTORY ===");
+
+        try (BufferedReader br = new BufferedReader(new FileReader("transactions.csv"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
             }
+        } catch (IOException e) {
+            System.out.println("No transactions found.");
         }
     }
 }
